@@ -107,3 +107,46 @@ def compare_chart(df, inc):
     )
     fig.update_layout(showlegend=False)
     return _style(fig)
+
+
+def monthly_chart(df):
+    d = df.copy()
+    d["month"] = d["date"].dt.strftime("%b %Y")
+    d["month_sort"] = d["date"].dt.to_period("M")
+    counts = d.groupby(["month", "month_sort"]).size().reset_index(name="incidents")
+    counts = counts.sort_values("month_sort")
+    fig = px.bar(counts, x="month", y="incidents", title="Incidents by month")
+    fig.update_traces(marker_color="#8b5cf6")
+    return _style(fig)
+
+
+def weekday_chart(df):
+    d = df.copy()
+    d["weekday"] = d["date"].dt.day_name()
+    order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    counts = d.groupby("weekday").size().reindex(order, fill_value=0).reset_index(name="incidents")
+    fig = px.bar(counts, x="weekday", y="incidents", title="Incidents by day of week")
+    fig.update_traces(marker_color="#22d3ee")
+    return _style(fig)
+
+
+def mttr_trend_chart(df):
+    """Average resolution time over each month — shows whether the team is getting faster."""
+    d = df.copy()
+    d["month"] = d["date"].dt.strftime("%b %Y")
+    d["month_sort"] = d["date"].dt.to_period("M")
+    trend = d.groupby(["month", "month_sort"])["mttr_minutes"].mean().reset_index()
+    trend = trend.sort_values("month_sort")
+    fig = px.line(trend, x="month", y="mttr_minutes", markers=True,
+                  title="Avg. resolution time trend")
+    fig.update_traces(line_color="#22c55e", marker_color="#22c55e")
+    return _style(fig)
+
+
+def category_severity_chart(df):
+    """Stacked bar: which categories carry the most critical (SEV-1) incidents."""
+    counts = df.groupby(["category", "severity"]).size().reset_index(name="incidents")
+    fig = px.bar(counts, x="category", y="incidents", color="severity",
+                 color_discrete_map=SEV, title="Category vs severity",
+                 barmode="stack")
+    return _style(fig)

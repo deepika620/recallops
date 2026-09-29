@@ -4,6 +4,7 @@ import re
 from datetime import date
 
 LOG_FILE = "incidents_log.json"
+FEEDBACK_FILE = "feedback_log.json"
 
 CATEGORIES = [
     "Deployment", "Database", "Cache", "Messaging",
@@ -176,8 +177,6 @@ def relevance(alert, inc):
     """How many meaningful word stems the alert shares with the incident."""
     return len(_stems(alert) & _stems(_blob(inc)))
 
-FEEDBACK_FILE = "feedback_log.json"
-
 
 def load_feedback():
     if not os.path.exists(FEEDBACK_FILE):
@@ -190,12 +189,6 @@ def load_feedback():
 
 
 def add_feedback(inc, alert, worked):
-    from memory import remember
-    verdict = "worked" if worked else "did not work"
-    remember(
-        f"Feedback on {inc['id']} ({inc['service']}): for the alert "
-        f"\"{alert}\", the recorded fix \"{inc['fix']}\" {verdict}."
-    )
     log = load_feedback()
     log.append({
         "incident_id": inc["id"],
@@ -206,30 +199,12 @@ def add_feedback(inc, alert, worked):
     with open(FEEDBACK_FILE, "w", encoding="utf-8") as f:
         json.dump(log, f, indent=2)
 
-
-def postmortem_md(inc):
-    failed = "\n".join(f"- {a}" for a in inc["failed_attempts"]) or "- None recorded"
-    return f"""# Postmortem: {inc['id']} - {inc['service']}
-
-- **Severity:** {inc['severity']}
-- **Category:** {inc['category']}
-- **Date:** {inc['date']}
-- **Time to resolve:** {inc['mttr_minutes']} minutes
-
-## Summary
-{inc['symptom']}
-
-## Root cause
-{inc['root_cause']}
-
-## What did not work
-{failed}
-
-## Resolution
-{inc['fix']}
-
-## Follow-up actions
-- [ ] Add monitoring or an alert for this failure mode
-- [ ] Add this fix to the on-call runbook
-- [ ] Review whether the root cause can be prevented
-"""
+    try:
+        from memory import remember
+        verdict = "worked" if worked else "did not work"
+        remember(
+            f"Feedback on {inc['id']} ({inc['service']}): for the alert "
+            f"\"{alert}\", the recorded fix \"{inc['fix']}\" {verdict}."
+        )
+    except Exception:
+        pass  # local feedback log still saved even if Hindsight call fails

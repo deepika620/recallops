@@ -3,3 +3,9 @@
 __pycache__/
 incidents_log.json
 feedback_log.json
+.env
+.venv/
+__pycache__/
+incidents_log.json
+feedback_log.json
+.streamlit/secrets.toml
